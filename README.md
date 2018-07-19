@@ -19,7 +19,7 @@ You will need the following to run this project:
 * Clone the Repository from Github
 * Open the project folder using Android Studio IDE
 
-### Features
+## Features
 * Insert new entry
 * Displays all entries
 * Deletes an entry by swiping left or right
