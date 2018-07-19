@@ -1,5 +1,6 @@
 package bankzworld.com.adapter;
 
+import android.content.Context;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -14,9 +15,10 @@ import bankzworld.com.data.User;
 public class UsersAdapter extends RecyclerView.Adapter<UsersAdapter.UsersViewHolder> {
     private static final String TAG = "UsersAdapter";
     private List<User> usersList;
+    private Context context;
 
-    public UsersAdapter(List<User> usersList) {
-        this.usersList = usersList;
+    public UsersAdapter(Context context) {
+        this.context = context;
     }
 
     @Override
@@ -44,6 +46,15 @@ public class UsersAdapter extends RecyclerView.Adapter<UsersAdapter.UsersViewHol
         if (usersList == null)
             return 0;
         return usersList.size();
+    }
+
+    public List<User> getUsersList() {
+        return usersList;
+    }
+
+    public void setUsersList(List<User> entryList) {
+        usersList = entryList;
+        notifyDataSetChanged();
     }
 
     public class UsersViewHolder extends RecyclerView.ViewHolder {

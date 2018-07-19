@@ -1,5 +1,6 @@
 package bankzworld.com.data;
 
+import android.arch.lifecycle.LiveData;
 import android.arch.persistence.room.Dao;
 import android.arch.persistence.room.Delete;
 import android.arch.persistence.room.Insert;
@@ -18,7 +19,7 @@ public interface UserDao {
 
     // gets all items from the database
     @Query("SELECT * FROM User")
-    List<User> findAllUsers();
+    LiveData<List<User>> loadAllUsers();
 
     // deletes an item from the database
     @Delete

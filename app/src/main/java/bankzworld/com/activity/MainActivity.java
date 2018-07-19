@@ -1,7 +1,9 @@
 package bankzworld.com.activity;
 
+import android.arch.lifecycle.Observer;
 import android.arch.lifecycle.ViewModelProviders;
 import android.os.Bundle;
+import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.TextInputEditText;
 import android.support.v7.app.AppCompatActivity;
@@ -12,20 +14,19 @@ import android.support.v7.widget.Toolbar;
 import android.support.v7.widget.helper.ItemTouchHelper;
 import android.text.TextUtils;
 import android.view.View;
-import android.widget.Toast;
 
 import java.util.List;
 
 import bankzworld.com.R;
 import bankzworld.com.adapter.UsersAdapter;
 import bankzworld.com.data.User;
-import bankzworld.com.listeners.UserListeners;
+import bankzworld.com.data.UserDatabase;
+import bankzworld.com.util.AppExecutor;
 import bankzworld.com.viewmodel.GetUsersViewmodel;
-import bankzworld.com.viewmodel.NewUserViewmodel;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 
-public class MainActivity extends AppCompatActivity implements UserListeners {
+public class MainActivity extends AppCompatActivity {
 
     RecyclerView recyclerView;
     @BindView(R.id.users_name)
@@ -33,8 +34,9 @@ public class MainActivity extends AppCompatActivity implements UserListeners {
     @BindView(R.id.users_skill)
     TextInputEditText mSkill;
 
-    GetUsersViewmodel getUsersViewmodel;
-    NewUserViewmodel newUserViewmodel;
+    private UserDatabase userDatabase;
+    private GetUsersViewmodel getUsersViewmodel;
+    private UsersAdapter usersAdapter;
 
     public MainActivity() {
     }
@@ -54,15 +56,17 @@ public class MainActivity extends AppCompatActivity implements UserListeners {
         recyclerView.setItemAnimator(new DefaultItemAnimator());
         recyclerView.setHasFixedSize(true);
 
+        // init adapter
+        usersAdapter = new UsersAdapter(this);
+
+        // init database
+        userDatabase = UserDatabase.getDatabase(getApplicationContext());
+
         //Set up the ViewModel
         getUsersViewmodel = ViewModelProviders.of(this).get(GetUsersViewmodel.class);
-        newUserViewmodel = ViewModelProviders.of(this).get(NewUserViewmodel.class);
-
-        // sets listeners
-        getUsersViewmodel.setListener(this);
 
         // retrieves users
-        getUsersViewmodel.getUsers();
+        retrieveUsers();
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -76,20 +80,35 @@ public class MainActivity extends AppCompatActivity implements UserListeners {
                 } else if (TextUtils.isEmpty(skill)) {
                     mSkill.setError("required");
                 } else {
-                    User user = new User(mUserName.getText().toString().trim(), mSkill.getText().toString().trim());
-                    newUserViewmodel.addUsers(user);
+                    final User user = new User(mUserName.getText().toString().trim(), mSkill.getText().toString().trim());
+                    AppExecutor.getsInstance().getDiskIO().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            userDatabase.userDao().insertUser(user);
+                        }
+                    });
 
                     // clears the input text
                     mUserName.setText("");
                     mSkill.setText("");
 
                     // retrieves users
-                    getUsersViewmodel.getUsers();
+                    retrieveUsers();
                 }
             }
         });
 
         onSwipeToDelete();
+    }
+
+    private void retrieveUsers() {
+        getUsersViewmodel.getEntries().observe(this, new Observer<List<User>>() {
+            @Override
+            public void onChanged(@Nullable List<User> users) {
+                usersAdapter.setUsersList(users);
+                recyclerView.setAdapter(usersAdapter);
+            }
+        });
     }
 
     // deletes an item from the list
@@ -103,26 +122,13 @@ public class MainActivity extends AppCompatActivity implements UserListeners {
 
             @Override
             public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
-
                 // get the view holder item tag and store it in an integer variable
                 int id = viewHolder.getAdapterPosition();
-
                 // deletes user using the id
-                getUsersViewmodel.deleteUser(id);
-
+                List<User> users = usersAdapter.getUsersList();
+                userDatabase.userDao().deleteUser(users.get(id));
             }
         }).attachToRecyclerView(recyclerView);
     }
 
-    // override this method in other to receive from the listener
-    @Override
-    public void onSuccess(List<User> usersList) {
-        recyclerView.setAdapter(new UsersAdapter(usersList));
-    }
-
-    @Override
-    public void onDeleteSuccess(String message) {
-        getUsersViewmodel.getUsers();
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
-    }
 }
